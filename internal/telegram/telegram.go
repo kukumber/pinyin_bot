@@ -51,6 +51,11 @@ func GetUpdates(cfg *config.Config) error {
 			slog.Warn("unknown command", "command", update.Message.Command())
 		}
 
+		// check that result is not empty
+		if result == "" {
+			result = "Command not recognized or processing failed."
+		}
+
 		// send the result
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, result)
 		msg.ReplyToMessageID = update.Message.MessageID
