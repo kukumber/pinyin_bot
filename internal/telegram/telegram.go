@@ -1,7 +1,7 @@
 package telegram
 
 import (
-	"log"
+	"log/slog"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -18,7 +18,7 @@ func GetUpdates(cfg *config.Config) error {
 	}
 	bot.Debug = true
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	slog.Info("authorized on account", "account", bot.Self.UserName)
 
 	// get updates
 	u := tgbotapi.NewUpdate(cfg.InitOffset)
@@ -32,7 +32,7 @@ func GetUpdates(cfg *config.Config) error {
 			continue
 		}
 
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+		slog.Info("message received", "user", update.Message.From.UserName, "text", update.Message.Text)
 
 		// ignore any non-command Messages
 		if !update.Message.IsCommand() {
@@ -48,13 +48,16 @@ func GetUpdates(cfg *config.Config) error {
 		case "pld":
 			result = converter.ConvertToPallady(update.Message.CommandArguments())
 		default:
-			log.Printf("unknown command: %s", update.Message.Command())
+			slog.Warn("unknown command", "command", update.Message.Command())
 		}
 
 		// send the result
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, result)
 		msg.ReplyToMessageID = update.Message.MessageID
-		bot.Send(msg)
+
+		if _, err := bot.Send(msg); err != nil {
+			slog.Error("Failed to send message", "error", err)
+		}
 	}
 
 	return nil
