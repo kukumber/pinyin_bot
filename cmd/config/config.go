@@ -20,16 +20,14 @@ func ParseFlags() (Config, error) {
 
 	flag.StringVar(&cfg.APIKey, "api-key", "", "Telegram API key")
 	flag.IntVar(&cfg.InitOffset, "init-offset", 0, "Initial Telegram offset")
-	flag.IntVar(&cfg.UpdateInterval, "update-interval", 0, "Update interval in seconds")
+	flag.IntVar(&cfg.UpdateInterval, "update-interval", 60, "Update interval in seconds")
 	flag.Parse()
 
-	err := parseEnv(&cfg)
-	if err != nil {
+	if err := parseEnv(&cfg); err != nil {
 		return cfg, err
 	}
 
-	err = checkConfigValues(&cfg)
-	if err != nil {
+	if err := checkConfigValues(&cfg); err != nil {
 		return cfg, err
 	}
 
@@ -38,30 +36,22 @@ func ParseFlags() (Config, error) {
 
 // parseEnv parses environment variables and overrides the config values if empty
 func parseEnv(cfg *Config) error {
-	var err error
-
-	// parse API_KEY
 	if cfg.APIKey == "" && os.Getenv("API_KEY") != "" {
 		cfg.APIKey = os.Getenv("API_KEY")
-	} else if cfg.APIKey == "" {
-		return fmt.Errorf("API_KEY is empty")
+	}
+	if cfg.APIKey == "" {
+		return fmt.Errorf("API_KEY is missing")
 	}
 
-	// parse UPDATE_INTERVAL
-	if cfg.UpdateInterval == 0 && os.Getenv("UPDATE_INTERVAL") != "" {
-		cfg.UpdateInterval, err = strconv.Atoi(os.Getenv("UPDATE_INTERVAL"))
-		if err != nil {
-			return fmt.Errorf("failed to parse UPDATE_INTERVAL: %w", err)
+	if interval := os.Getenv("UPDATE_INTERVAL"); interval != "" {
+		if val, err := strconv.Atoi(interval); err == nil {
+			cfg.UpdateInterval = val
 		}
-	} else if cfg.UpdateInterval == 0 {
-		cfg.UpdateInterval = 60
 	}
 
-	// parse INIT_OFFSET
-	if cfg.InitOffset == 0 && os.Getenv("INIT_OFFSET") != "" {
-		cfg.InitOffset, err = strconv.Atoi(os.Getenv("INIT_OFFSET"))
-		if err != nil {
-			return fmt.Errorf("failed to parse INIT_OFFSET: %w", err)
+	if offset := os.Getenv("INIT_OFFSET"); offset != "" {
+		if val, err := strconv.Atoi(offset); err == nil {
+			cfg.InitOffset = val
 		}
 	}
 
