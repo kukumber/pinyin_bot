@@ -20,6 +20,11 @@ var commandHandlers = map[string]func(string) string{
 	"pld": converter.ConvertToPallady,
 }
 
+const helpText = `Available commands:
+/py <text> — convert tone numbers to pinyin marks, e.g. /py ni3 hao3 → nǐ hǎo
+/pld <text> — convert pinyin to Cyrillic Pallady, e.g. /pld ni hao → ни хао
+/help — show this message`
+
 // NewBot initializes a new bot
 func NewBot(cfg config.Config) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(cfg.APIKey)
@@ -62,6 +67,10 @@ func (b *Bot) processUpdate(update tgbotapi.Update) error {
 
 	if !update.Message.IsCommand() {
 		return nil
+	}
+
+	if update.Message.Command() == "help" {
+		return b.reply(update, helpText)
 	}
 
 	handler, exists := commandHandlers[update.Message.Command()]
