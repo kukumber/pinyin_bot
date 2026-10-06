@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/kukumber/pinyin_bot/cmd/config"
+	"github.com/kukumber/pinyin_bot/internal/config"
 	"github.com/kukumber/pinyin_bot/internal/telegram"
 )
 
@@ -14,28 +15,23 @@ func main() {
 	// parse flags
 	cfg, err := config.ParseFlags()
 	if err != nil {
-		panic(err)
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
 	}
 
-	// create context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// handle OS signals for graceful shutdown
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		<-c
-		cancel()
-	}()
+	// create context for graceful shutdown on OS signals
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// get updates from Telegram
-	bot, err := telegram.NewBot(cfg.APIKey)
+	bot, err := telegram.NewBot(cfg)
 	if err != nil {
-		panic(err)
+		slog.Error("failed to create bot", "error", err)
+		os.Exit(1)
 	}
 
-	if err = bot.Start(ctx, &cfg); err != nil {
-		panic(err)
+	if err = bot.Start(ctx, cfg); err != nil {
+		slog.Error("bot stopped with error", "error", err)
+		os.Exit(1)
 	}
 }

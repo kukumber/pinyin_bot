@@ -13,7 +13,7 @@ Pinyin Bot is a Go-based application designed to provide text-to-Pinyin and Piny
 ### Installation
 Clone the repository and install dependencies:
 ```bash
-git clone https://github.com/yourusername/pinyin_bot.git
+git clone https://github.com/kukumber/pinyin_bot.git
 cd pinyin_bot
 go mod tidy
 ```
@@ -23,12 +23,16 @@ The application can be configured using the following parameters:
 - `--api-key`: your telegram bot API key
 - `--init-offset`: initial telegram message offset
 - `--update-interval`: update interval in seconds, default 60
+- `--debug`: enable telegram API debug logging, default false
+
+Flags take precedence over environment variables, which take precedence over defaults.
 
 ### Environment Variables
 The application can be configured using the following environment variables:
 - `API_KEY`: your telegram bot API key
 - `INIT_OFFSET`: initial telegram message offset
 - `UPDATE_INTERVAL`: update interval in seconds, default 60
+- `DEBUG`: enable telegram API debug logging, default false
 
 ### Running the Application
 To start the application, run:

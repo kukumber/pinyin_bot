@@ -7,34 +7,38 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/kukumber/pinyin_bot/cmd/config"
+	"github.com/kukumber/pinyin_bot/internal/config"
 	"github.com/kukumber/pinyin_bot/internal/converter"
 )
-
-const botTimeout = 60
 
 type Bot struct {
 	api *tgbotapi.BotAPI
 }
 
+var commandHandlers = map[string]func(string) string{
+	"py":  converter.ConvertToPinyin,
+	"pld": converter.ConvertToPallady,
+}
+
 // NewBot initializes a new bot
-func NewBot(apiKey string) (*Bot, error) {
-	bot, err := tgbotapi.NewBotAPI(apiKey)
+func NewBot(cfg config.Config) (*Bot, error) {
+	api, err := tgbotapi.NewBotAPI(cfg.APIKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
-	bot.Debug = true
-	slog.Info("bot authorized", "username", bot.Self.UserName)
+	api.Debug = cfg.Debug
+	slog.Info("bot authorized", "username", api.Self.UserName)
 
-	return &Bot{api: bot}, nil
+	return &Bot{api: api}, nil
 }
 
-// Start listens for updates and processes them
-func (b *Bot) Start(ctx context.Context, cfg *config.Config) error {
+// Start listens for updates and processes them until ctx is canceled
+func (b *Bot) Start(ctx context.Context, cfg config.Config) error {
 	u := tgbotapi.NewUpdate(cfg.InitOffset)
-	u.Timeout = botTimeout
+	u.Timeout = cfg.UpdateInterval
 
 	updates := b.api.GetUpdatesChan(u)
+	defer b.api.StopReceivingUpdates()
 
 	for {
 		select {
@@ -60,11 +64,6 @@ func (b *Bot) processUpdate(update tgbotapi.Update) error {
 		return nil
 	}
 
-	commandHandlers := map[string]func(string) string{
-		"py":  converter.ConvertToPinyin,
-		"pld": converter.ConvertToPallady,
-	}
-
 	handler, exists := commandHandlers[update.Message.Command()]
 	if !exists {
 		slog.Warn("unknown command", "command", update.Message.Command())
@@ -85,9 +84,5 @@ func (b *Bot) reply(update tgbotapi.Update, text string) error {
 	msg.ReplyToMessageID = update.Message.MessageID
 
 	_, err := b.api.Send(msg)
-	if err != nil {
-		slog.Error("failed to send message", "chat_id", update.Message.Chat.ID, "error", err)
-	}
-
 	return err
 }
