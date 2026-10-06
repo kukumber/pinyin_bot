@@ -1,0 +1,18 @@
+services:
+  pinyin_bot:
+    build: .
+    image: pinyin_bot:${IMAGE_TAG:-latest}
+    container_name: pinyin_bot
+    env_file: ".env"
+    restart: unless-stopped
+    networks:
+      - pinyin_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "512m"
+        max-file: "1"
+
+networks:
+  pinyin_net:
+    driver: bridge

@@ -46,5 +46,20 @@ To build the application, run:
 go build -o pinyin_bot cmd/main.go
 ```
 
+### Running with Docker
+The application ships with a `Dockerfile` and `docker-compose.yml`. Create a `.env` file with your configuration (at minimum `API_KEY`), then build and start:
+```bash
+docker compose build
+docker compose up -d
+```
+
+The image is tagged `pinyin_bot:${IMAGE_TAG:-latest}`. To build or deploy a specific version, set `IMAGE_TAG` in the shell or in `.env`:
+```bash
+IMAGE_TAG=2.0.2 docker compose build
+IMAGE_TAG=2.0.2 docker compose up -d
+```
+
+The container attaches to the `pinyin_net` bridge network created by compose.
+
 ### Contributing
 Contributions are welcome. Please open an issue or pull request.
