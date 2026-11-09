@@ -1,0 +1,78 @@
+name: Deploy pinyin_bot
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/kukumber/pinyin_bot
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REMOTE_HOST: ruschinese.com
+      REMOTE_USER: ansible
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f docker/Dockerfile -t "$IMAGE":latest -t "$IMAGE":${{ github.sha }} .
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        run: docker push --all-tags "$IMAGE"
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          base64 -d <<< "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null
+          ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts
+
+      - name: Prepare remote directory
+        run: |
+          ssh "$REMOTE_USER@$REMOTE_HOST" \
+            'sudo mkdir -p /opt/compose/bots/pinyin_bot'
+
+      - name: Login to GHCR on remote host
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          ssh "$REMOTE_USER@$REMOTE_HOST" \
+            "echo $GHCR_TOKEN | sudo docker login ghcr.io -u kukumber --password-stdin"
+
+      - name: Copy compose file to /tmp
+        run: |
+          scp docker/docker-compose.yml "$REMOTE_USER@$REMOTE_HOST":/tmp/docker-compose.yml
+
+      - name: Install compose file
+        run: |
+          ssh "$REMOTE_USER@$REMOTE_HOST" \
+            'sudo mv /tmp/docker-compose.yml /opt/compose/bots/pinyin_bot/docker-compose.yml'
+
+      - name: Write .env with secrets
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        run: |
+          ssh "$REMOTE_USER@$REMOTE_HOST" \
+            'sudo tee /opt/compose/bots/pinyin_bot/.env > /dev/null' <<< "API_KEY=$TELEGRAM_TOKEN"
+
+      - name: Restart service
+        run: |
+          ssh "$REMOTE_USER@$REMOTE_HOST" \
+            'cd /opt/compose/bots/pinyin_bot && sudo docker compose pull && sudo docker compose up -d'
