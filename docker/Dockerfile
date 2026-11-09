@@ -1,5 +1,5 @@
 # build stage
-FROM golang:1.26-alpine AS build
+FROM golang:1.27 AS build
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -9,7 +9,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /pinyin_bot cmd/main.go
 
 # runtime stage
-FROM alpine:3.21
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates
 
 COPY --from=build /pinyin_bot /usr/local/bin/pinyin_bot
