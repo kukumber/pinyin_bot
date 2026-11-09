@@ -1,7 +1,7 @@
 services:
   pinyin_bot:
     build: .
-    image: pinyin_bot:${IMAGE_TAG:-latest}
+    image: ghcr.io/kukumber/pinyin_bot:${IMAGE_TAG:-latest}
     container_name: pinyin_bot
     env_file: ".env"
     restart: unless-stopped
