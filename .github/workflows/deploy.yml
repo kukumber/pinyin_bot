@@ -16,7 +16,7 @@ jobs:
       contents: read
       packages: write
     env:
-      REMOTE_HOST: ruschinese.com
+      REMOTE_HOST: "91.208.52.178"
       REMOTE_USER: ansible
     steps:
       - uses: actions/checkout@v4
